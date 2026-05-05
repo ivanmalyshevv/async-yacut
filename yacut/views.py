@@ -94,19 +94,15 @@ async def process_file(file_storage, filename):
     short_id = get_unique_short_id()
     print(f"[DEBUG] Generated short_id: {short_id} for {filename}")
 
-    # 1. Загружаем файл на Яндекс Диск
     location = await upload_file_to_disk(file_storage, filename)
     print(f"[DEBUG] File uploaded, location: {location}")
 
-    # 2. Получаем ссылку для скачивания
     download_url = await get_download_link(location)
-    print(f"[DEBUG] Got download link: {download_url[:100]}...")
+    print(f"[DEBUG] Got download link")
 
-    # 3. Сохраняем в БД
     url_map = URLMap(original=download_url, short=short_id)
     db.session.add(url_map)
     db.session.commit()
-    print(f"[DEBUG] Saved to DB: {short_id} -> {download_url[:100]}...")
 
     return filename, short_id, download_url
 

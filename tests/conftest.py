@@ -8,8 +8,6 @@ from dotenv import load_dotenv
 from io import BytesIO
 from PIL import Image
 
-pytest.skip("Skipping Yandex Disk tests", allow_module_level=True)
-
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
