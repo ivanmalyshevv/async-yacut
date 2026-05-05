@@ -1,0 +1,111 @@
+import asyncio
+from flask import Blueprint, render_template, redirect, url_for, flash, request
+from yacut.forms import MainForm, FileUploadForm
+from yacut.models import URLMap
+from yacut.utils import get_unique_short_id
+from yacut import db
+from yacut.yadisk import upload_file_to_disk
+
+main_bp = Blueprint('main', __name__)
+
+@main_bp.route('/', methods=['GET', 'POST'])
+def index():
+    form = MainForm()
+    if form.validate_on_submit():
+        original = form.original_link.data
+        custom_id = form.custom_id.data
+        
+        if not custom_id or custom_id.strip() == '':
+            custom_id = get_unique_short_id()
+        
+        # Проверка на зарезервированное имя
+        if custom_id == 'files':
+            flash('Предложенный вариант короткой ссылки уже существует.', 'danger')
+            return render_template('index.html', form=form)
+        
+        # Проверка уникальности
+        if URLMap.query.filter_by(short=custom_id).first():
+            flash('Предложенный вариант короткой ссылки уже существует.', 'danger')
+            return render_template('index.html', form=form)
+        
+        # Создаем запись
+        url_map = URLMap(original=original, short=custom_id)
+        db.session.add(url_map)
+        db.session.commit()
+        
+        short_url = url_for('main.follow_short', short=custom_id, _external=True)
+        return render_template('index.html', form=form, short_url=short_url)
+    
+    return render_template('index.html', form=form)
+
+@main_bp.route('/<string:short>')
+def follow_short(short):
+    url_map = URLMap.query.filter_by(short=short).first_or_404()
+    return redirect(url_map.original)
+
+@main_bp.route('/files', methods=['GET', 'POST'])
+def files():
+    form = FileUploadForm()
+    files_links = []
+    
+    if form.validate_on_submit():
+        uploaded_files = request.files.getlist('files')
+        print(f"[DEBUG] Received {len(uploaded_files)} files")
+        
+        if uploaded_files and uploaded_files[0].filename:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            tasks = []
+            
+            for file_storage in uploaded_files:
+                if file_storage and file_storage.filename:
+                    filename = file_storage.filename
+                    print(f"[DEBUG] Processing file: {filename}")
+                    tasks.append(process_file(file_storage, filename))
+            
+            try:
+                results = loop.run_until_complete(asyncio.gather(*tasks))
+                for filename, short_id, disk_url in results:
+                    files_links.append({
+                        'filename': filename,
+                        'short_url': url_for('main.download_file', short_id=short_id, _external=True),
+                        'download_url': disk_url
+                    })
+                    print(f"[DEBUG] Successfully processed: {filename} -> {short_id}")
+            except Exception as e:
+                flash(f'Ошибка при загрузке файлов: {str(e)}', 'danger')
+                print(f"[DEBUG] Error: {e}")
+            finally:
+                loop.close()
+        else:
+            flash('Выберите файлы для загрузки', 'danger')
+    
+    return render_template('files.html', form=form, files_links=files_links)
+
+async def process_file(file_storage, filename):
+    """Обработка одного файла"""
+    short_id = get_unique_short_id()
+    print(f"[DEBUG] Generated short_id: {short_id} for {filename}")
+    
+    # Загружаем файл на Яндекс Диск
+    location = await upload_file_to_disk(file_storage, filename)
+    print(f"[DEBUG] File uploaded, location: {location}")
+    
+    # Формируем URL для доступа к файлу на Яндекс Диске
+    from urllib.parse import unquote
+    clean_path = unquote(location)
+    disk_url = f"https://disk.yandex.ru{clean_path}"
+    
+    # Сохраняем в БД
+    url_map = URLMap(original=disk_url, short=short_id)
+    db.session.add(url_map)
+    db.session.commit()
+    print(f"[DEBUG] Saved to DB: {short_id} -> {disk_url}")
+    
+    return filename, short_id, disk_url
+
+@main_bp.route('/download/<short_id>')
+def download_file(short_id):
+    """Скачивание файла по короткой ссылке"""
+    url_map = URLMap.query.filter_by(short=short_id).first_or_404()
+    return redirect(url_map.original)

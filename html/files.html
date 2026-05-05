@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+  <h1>Загрузка файлов на Яндекс Диск</h1>
+  <form method="post" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}
+    <div class="mb-3">
+      {{ form.files.label(class="form-label") }}
+      {{ form.files(class="form-control", multiple=true) }}
+      {% for error in form.files.errors %}
+        <div class="text-danger">{{ error }}</div>
+      {% endfor %}
+    </div>
+    <button type="submit" class="btn btn-primary">Загрузить</button>
+  </form>
+  
+  {% if files_links %}
+    <h2 class="mt-4">Загруженные файлы</h2>
+    <table class="table table-bordered mt-2">
+      <thead>
+        <tr>
+          <th>Имя файла</th>
+          <th>Короткая ссылка</th>
+          <th>Скачать</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for file in files_links %}
+        <tr>
+          <td>{{ file.filename }}</td>
+          <td><a href="{{ file.short_url }}">{{ file.short_url }}</a></td>
+          <td><a href="{{ file.download_url }}" target="_blank">Открыть на Яндекс Диске</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+</div>
+{% endblock %}
