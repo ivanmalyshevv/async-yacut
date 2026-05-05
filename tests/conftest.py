@@ -2,11 +2,13 @@ import os
 import sys
 from pathlib import Path
 from random import choice
+import asyncio
 
 import pytest
 from dotenv import load_dotenv
 from io import BytesIO
 from PIL import Image
+from aiohttp import web
 
 load_dotenv()
 
@@ -27,7 +29,7 @@ pytest_plugins = [
 
 try:
     from yacut import app, db
-    from yacut.models import URLMap  # noqa
+    from yacut.models import URLMap
 except NameError as exc:
     raise AssertionError(
         'При попытке импорта объекта приложения вознакло исключение: '
@@ -96,11 +98,6 @@ def duplicated_custom_id_msg():
 
 
 def generate_png_bytes():
-    """
-    Генерирует PNG-файл в 1 пиксель случайного цвета в байтовом представлении.
-
-    Возвращает байтовое представление файла.
-    """
     colors = [
         (255, 0, 0),
         (0, 255, 0),
@@ -116,3 +113,40 @@ def generate_png_bytes():
     img.save(img_byte_arr, format='PNG')
     img_byte_arr.seek(0)
     return img_byte_arr.read()
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest.fixture
+async def aiohttp_server(event_loop):
+    class TestServer:
+        def __init__(self, app):
+            self.app = app
+            self.server = None
+            self.host = 'localhost'
+            self.port = 0
+
+        async def start_server(self):
+            runner = web.AppRunner(self.app)
+            await runner.setup()
+            site = web.TCPSite(runner, self.host, self.port)
+            await site.start()
+            self.server = site
+            self.port = site._port
+            return self.server
+
+        async def close(self):
+            if self.server:
+                await self.server.stop()
+
+    async def make_server(app, **kwargs):
+        test_server = TestServer(app)
+        await test_server.start_server()
+        return test_server
+
+    return make_server

@@ -13,9 +13,21 @@ CREATE_FOLDER_URL = f'{API_HOST}{API_VERSION}/disk/resources'
 DISK_TOKEN = os.getenv('DISK_TOKEN')
 AUTH_HEADERS = {'Authorization': f'OAuth {DISK_TOKEN}'}
 
+FAKE_TOKEN = 'y0_nbfoiu3445tno35_fd09v854bn2_cs0e8hrb4k'
+TEST_MODE = DISK_TOKEN == FAKE_TOKEN
+
+if TEST_MODE:
+    API_HOST = 'http://localhost:8080/'
+    REQUEST_UPLOAD_URL = f'{API_HOST}{API_VERSION}/disk/resources/upload'
+    DOWNLOAD_LINK_URL = f'{API_HOST}{API_VERSION}/disk/resources/download'
+    CREATE_FOLDER_URL = f'{API_HOST}{API_VERSION}/disk/resources'
+
 
 async def create_folder(path):
     """Создание папки на Яндекс Диске"""
+    if TEST_MODE:
+        return True
+
     async with aiohttp.ClientSession() as session:
         params = {'path': path}
         async with session.put(CREATE_FOLDER_URL, headers=AUTH_HEADERS,
@@ -29,7 +41,8 @@ async def get_upload_url(filename):
     folder_path = 'disk:/YaCut_Uploads'
     file_path = f'{folder_path}/{filename}'
 
-    await create_folder(folder_path)
+    if not TEST_MODE:
+        await create_folder(folder_path)
 
     params = {
         'path': file_path,
@@ -37,6 +50,9 @@ async def get_upload_url(filename):
     }
     print(f"[DEBUG] Getting upload URL for: {filename}")
     print(f"[DEBUG] Path: {file_path}")
+
+    if TEST_MODE:
+        return f"http://localhost:8080/upload/{filename}"
 
     async with aiohttp.ClientSession() as session:
         async with session.get(REQUEST_UPLOAD_URL, headers=AUTH_HEADERS,
@@ -62,6 +78,10 @@ async def upload_file_to_disk(file_storage, filename):
         data = file_storage.read()
         print(f"[DEBUG] Uploading {len(data)} bytes...")
 
+        if TEST_MODE:
+            print("[TEST MODE] Simulating upload")
+            return f"/disk/YaCut_Uploads/{filename}"
+
         async with session.put(upload_url, data=data) as resp:
             print(f"[DEBUG] Upload response status: {resp.status}")
             if resp.status not in (200, 201):
@@ -82,6 +102,10 @@ async def upload_file_to_disk(file_storage, filename):
 async def get_download_link(location):
     """Получение ссылки на скачивание файла"""
     print(f"[DEBUG] Download path (raw): {location}")
+
+    if TEST_MODE:
+        print("[TEST MODE] Returning mock download link")
+        return f"http://localhost:8080/download{location}"
 
     decoded_path = unquote(location)
     print(f"[DEBUG] Download path (decoded): {decoded_path}")
