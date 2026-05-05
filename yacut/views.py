@@ -4,7 +4,7 @@ from yacut.forms import MainForm, FileUploadForm
 from yacut.models import URLMap
 from yacut.utils import get_unique_short_id
 from yacut import db
-from yacut.yadisk import upload_file_to_disk
+from yacut.yadisk import upload_file_to_disk, get_download_link
 
 main_bp = Blueprint('main', __name__)
 

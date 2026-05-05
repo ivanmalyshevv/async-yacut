@@ -1,6 +1,6 @@
 import os
 import aiohttp
-from urllib.parse import quote, unquote
+from urllib.parse import unquote
 from dotenv import load_dotenv
 
 load_dotenv()
