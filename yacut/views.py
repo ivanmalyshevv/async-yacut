@@ -98,7 +98,7 @@ async def process_file(file_storage, filename):
     print(f"[DEBUG] File uploaded, location: {location}")
 
     download_url = await get_download_link(location)
-    print(f"[DEBUG] Got download link")
+    print(f"[DEBUG] Got download link: {download_url[:100] if download_url else 'None'}...")
 
     url_map = URLMap(original=download_url, short=short_id)
     db.session.add(url_map)
