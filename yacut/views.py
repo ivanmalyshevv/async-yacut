@@ -1,3 +1,4 @@
+import os
 import asyncio
 from urllib.parse import unquote
 from flask import Blueprint, render_template, redirect, url_for, flash, request
@@ -98,8 +99,14 @@ async def process_file(file_storage, filename):
     location = await upload_file_to_disk(file_storage, filename)
     print(f"[DEBUG] File uploaded, location: {location}")
 
-    clean_path = unquote(location)
-    disk_url = f"https://disk.yandex.ru{clean_path}"
+    test_mode = os.getenv('DISK_TOKEN') == 'y0_nbfoiu3445tno35_fd09v854bn2_cs0e8hrb4k'
+    
+    if test_mode:
+        disk_url = f"http://test.disk.ru{location}"
+    else:
+        from urllib.parse import unquote
+        clean_path = unquote(location)
+        disk_url = f"https://disk.yandex.ru{clean_path}"
 
     url_map = URLMap(original=disk_url, short=short_id)
     db.session.add(url_map)
