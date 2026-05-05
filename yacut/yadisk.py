@@ -1,6 +1,6 @@
 import os
 import aiohttp
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,16 +13,9 @@ CREATE_FOLDER_URL = f'{API_HOST}{API_VERSION}/disk/resources'
 DISK_TOKEN = os.getenv('DISK_TOKEN')
 AUTH_HEADERS = {'Authorization': f'OAuth {DISK_TOKEN}'}
 
-# Определяем, в тестовом ли мы режиме
-TEST_MODE = DISK_TOKEN == 'y0_nbfoiu3445tno35_fd09v854bn2_cs0e8hrb4k'
-
 
 async def create_folder(path):
     """Создание папки на Яндекс Диске"""
-    if TEST_MODE:
-        print("[TEST MODE] Skipping folder creation")
-        return True
-
     async with aiohttp.ClientSession() as session:
         params = {'path': path}
         async with session.put(CREATE_FOLDER_URL, headers=AUTH_HEADERS,
@@ -34,10 +27,9 @@ async def create_folder(path):
 async def get_upload_url(filename):
     """Получение URL для загрузки файла"""
     folder_path = 'disk:/YaCut_Uploads'
-    file_path = f'{folder_path}/{quote(filename)}'
+    file_path = f'{folder_path}/{filename}'
 
-    if not TEST_MODE:
-        await create_folder(folder_path)
+    await create_folder(folder_path)
 
     params = {
         'path': file_path,
@@ -89,10 +81,12 @@ async def upload_file_to_disk(file_storage, filename):
 
 async def get_download_link(location):
     """Получение ссылки на скачивание файла"""
-    clean_path = location
-    print(f"[DEBUG] Download path: {clean_path}")
+    print(f"[DEBUG] Download path (raw): {location}")
 
-    params = {'path': clean_path}
+    decoded_path = unquote(location)
+    print(f"[DEBUG] Download path (decoded): {decoded_path}")
+
+    params = {'path': decoded_path}
 
     async with aiohttp.ClientSession() as session:
         async with session.get(DOWNLOAD_LINK_URL, headers=AUTH_HEADERS,
@@ -100,8 +94,6 @@ async def get_download_link(location):
             print(f"[DEBUG] Download link response: {resp.status}")
             if resp.status != 200:
                 error_text = await resp.text()
-                if TEST_MODE:
-                    return f"http://test.download.link/{clean_path}"
                 raise Exception(
                     f"Ошибка получения ссылки скачивания: "
                     f"{resp.status}, {error_text}"

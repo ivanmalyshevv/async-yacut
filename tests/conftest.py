@@ -15,7 +15,6 @@ sys.path.append(str(BASE_DIR))
 
 _user_environment = os.environ.copy()
 _tmp_db_uri = 'sqlite:///:memory:'
-os.environ['API_HOST'] = 'http://localhost:8080'
 os.environ['DATABASE_URI'] = _tmp_db_uri
 os.environ['DISK_TOKEN'] = 'y0_nbfoiu3445tno35_fd09v854bn2_cs0e8hrb4k'
 
