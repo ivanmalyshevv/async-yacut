@@ -16,8 +16,7 @@ class MainForm(FlaskForm):
         validators=[
             Optional(),
             Length(max=16, message='Не более 16 символов'),
-            Regexp(r'^[a-zA-Z0-9]+$',
-                   message='Только латинские буквы и цифры')
+            Regexp(r'^[a-zA-Z0-9]+$', message='Только латинские буквы и цифры')
         ]
     )
 

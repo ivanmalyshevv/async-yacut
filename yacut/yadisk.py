@@ -1,126 +1,59 @@
-import os
-import aiohttp
 from urllib.parse import unquote
-from dotenv import load_dotenv
 
-load_dotenv()
+import aiohttp
+from flask import current_app
 
 API_HOST = 'https://cloud-api.yandex.net/'
 API_VERSION = 'v1'
-REQUEST_UPLOAD_URL = f'{API_HOST}{API_VERSION}/disk/resources/upload'
+
 DOWNLOAD_LINK_URL = f'{API_HOST}{API_VERSION}/disk/resources/download'
-CREATE_FOLDER_URL = f'{API_HOST}{API_VERSION}/disk/resources'
-DISK_TOKEN = os.getenv('DISK_TOKEN')
-AUTH_HEADERS = {'Authorization': f'OAuth {DISK_TOKEN}'}
-
-FAKE_TOKEN = 'y0_nbfoiu3445tno35_fd09v854bn2_cs0e8hrb4k'
-TEST_MODE = DISK_TOKEN == FAKE_TOKEN
-
-if TEST_MODE:
-    API_HOST = 'http://localhost:8080/'
-    REQUEST_UPLOAD_URL = f'{API_HOST}{API_VERSION}/disk/resources/upload'
-    DOWNLOAD_LINK_URL = f'{API_HOST}{API_VERSION}/disk/resources/download'
-    CREATE_FOLDER_URL = f'{API_HOST}{API_VERSION}/disk/resources'
 
 
-async def create_folder(path):
-    """Создание папки на Яндекс Диске"""
-    if TEST_MODE:
-        return True
-
-    async with aiohttp.ClientSession() as session:
-        params = {'path': path}
-        async with session.put(CREATE_FOLDER_URL, headers=AUTH_HEADERS,
-                               params=params) as resp:
-            print(f"[DEBUG] Create folder {path}: {resp.status}")
-            return resp.status in (200, 201)
+def _get_auth_headers() -> dict:
+    token = current_app.config.get('DISK_TOKEN')
+    return {'Authorization': f'OAuth {token}'} if token else {}
 
 
-async def get_upload_url(filename):
-    """Получение URL для загрузки файла"""
-    folder_path = 'disk:/YaCut_Uploads'
-    file_path = f'{folder_path}/{filename}'
-
-    if not TEST_MODE:
-        await create_folder(folder_path)
-
+async def get_upload_url(filename: str) -> str:
+    headers = _get_auth_headers()
     params = {
-        'path': file_path,
-        'overwrite': 'true'
+        'path': f'app:/{filename}',
+        'overwrite': 'True',
     }
-    print(f"[DEBUG] Getting upload URL for: {filename}")
-    print(f"[DEBUG] Path: {file_path}")
-
-    if TEST_MODE:
-        return f"http://localhost:8080/upload/{filename}"
+    upload_url_endpoint = f'{API_HOST}{API_VERSION}/disk/resources/upload'
 
     async with aiohttp.ClientSession() as session:
-        async with session.get(REQUEST_UPLOAD_URL, headers=AUTH_HEADERS,
-                               params=params) as resp:
-            print(f"[DEBUG] Response status: {resp.status}")
-            if resp.status != 200:
-                error_text = await resp.text()
-                raise Exception(
-                    f"Ошибка получения URL загрузки: "
-                    f"{resp.status}, {error_text}"
-                )
-            data = await resp.json()
-            print("[DEBUG] Got upload URL")
-            return data['href']
+        async with session.get(
+            upload_url_endpoint,
+            headers=headers,
+            params=params,
+        ) as response:
+            upload_info = await response.json()
+            return upload_info['href']
 
 
-async def upload_file_to_disk(file_storage, filename):
-    """Загрузка файла на Яндекс Диск"""
-    upload_url = await get_upload_url(filename)
+async def upload_file(upload_url: str, file_storage) -> str:
+    file_bytes = file_storage.read()
 
     async with aiohttp.ClientSession() as session:
-        file_storage.seek(0)
-        data = file_storage.read()
-        print(f"[DEBUG] Uploading {len(data)} bytes...")
-
-        if TEST_MODE:
-            print("[TEST MODE] Simulating upload")
-            return f"/disk/YaCut_Uploads/{filename}"
-
-        async with session.put(upload_url, data=data) as resp:
-            print(f"[DEBUG] Upload response status: {resp.status}")
-            if resp.status not in (200, 201):
-                error_text = await resp.text()
-                raise Exception(
-                    f"Ошибка загрузки файла: "
-                    f"{resp.status}, {error_text}"
-                )
-
-            location = resp.headers.get('Location')
-            print(f"[DEBUG] Got location: {location}")
-
-            if not location:
-                raise Exception("Не получен Location заголовок")
-            return location
+        async with session.put(upload_url, data=file_bytes) as response:
+            location = response.headers.get('Location', '')
+    
+    location = unquote(location)
+    if location.startswith('/disk'):
+        location = location[len('/disk'):]
+    return location
 
 
-async def get_download_link(location):
-    """Получение ссылки на скачивание файла"""
-    print(f"[DEBUG] Download path (raw): {location}")
-
-    if TEST_MODE:
-        print("[TEST MODE] Returning mock download link")
-        return f"http://localhost:8080/download{location}"
-
-    decoded_path = unquote(location)
-    print(f"[DEBUG] Download path (decoded): {decoded_path}")
-
-    params = {'path': decoded_path}
-
+async def get_download_url(path_on_disk: str) -> str:
+    headers = _get_auth_headers()
+    params = {'path': path_on_disk}
+    
     async with aiohttp.ClientSession() as session:
-        async with session.get(DOWNLOAD_LINK_URL, headers=AUTH_HEADERS,
-                               params=params) as resp:
-            print(f"[DEBUG] Download link response: {resp.status}")
-            if resp.status != 200:
-                error_text = await resp.text()
-                raise Exception(
-                    f"Ошибка получения ссылки скачивания: "
-                    f"{resp.status}, {error_text}"
-                )
-            data = await resp.json()
-            return data['href']
+        async with session.get(
+            DOWNLOAD_LINK_URL,
+            headers=headers,
+            params=params,
+        ) as response:
+            download_info = await response.json()
+            return download_info['href']
