@@ -16,7 +16,6 @@ def _get_auth_headers() -> dict:
 
 
 async def get_upload_url(filename: str) -> str:
-    """Получает URL для загрузки файла."""
     headers = _get_auth_headers()
     params = {
         'path': f'disk:/{filename}',
@@ -37,7 +36,6 @@ async def get_upload_url(filename: str) -> str:
 
 
 async def upload_file(upload_url: str, file_storage) -> str:
-    """Загружает файл по полученному URL."""
     file_bytes = file_storage.read()
 
     async with aiohttp.ClientSession() as session:
@@ -56,7 +54,6 @@ async def upload_file(upload_url: str, file_storage) -> str:
 
 
 async def get_download_url(path_on_disk: str) -> str:
-    """Получает ссылку на скачивание файла."""
     headers = _get_auth_headers()
     params = {'path': path_on_disk}
 

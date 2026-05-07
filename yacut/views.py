@@ -21,13 +21,17 @@ def index():
             short_id = URLMap.get_unique_short_id()
         else:
             if custom_id == 'files':
-                flash('Предложенный вариант короткой ссылки уже существует.',
-                      'danger')
+                flash(
+                    'Предложенный вариант короткой ссылки уже существует.',
+                    'danger'
+                )
                 return render_template('index.html', form=form)
 
             if URLMap.query.filter_by(short=custom_id).first():
-                flash('Предложенный вариант короткой ссылки уже существует.',
-                      'danger')
+                flash(
+                    'Предложенный вариант короткой ссылки уже существует.',
+                    'danger'
+                )
                 return render_template('index.html', form=form)
 
             short_id = custom_id
@@ -36,8 +40,9 @@ def index():
         db.session.add(url_map)
         db.session.commit()
 
-        short_url = url_for('main.follow_short', short=short_id,
-                            _external=True)
+        short_url = url_for(
+            'main.follow_short', short=short_id, _external=True
+        )
         return render_template('index.html', form=form, short_url=short_url)
 
     return render_template('index.html', form=form, short_url=short_url)
@@ -69,12 +74,14 @@ def files():
 
             try:
                 results = loop.run_until_complete(asyncio.gather(*tasks))
-                for filename, short_id, download_url in results:
+                for filename, short_id in results:
                     files_links.append({
                         'filename': filename,
-                        'short_url': url_for('main.follow_short',
-                                             short=short_id,
-                                             _external=True),
+                        'short_url': url_for(
+                            'main.follow_short',
+                            short=short_id,
+                            _external=True
+                        ),
                     })
             except Exception as e:
                 flash(f'Ошибка при загрузке файлов: {str(e)}', 'danger')
