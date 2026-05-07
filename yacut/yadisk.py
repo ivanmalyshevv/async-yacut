@@ -38,7 +38,6 @@ async def upload_file(upload_url: str, file_storage) -> str:
     async with aiohttp.ClientSession() as session:
         async with session.put(upload_url, data=file_bytes) as response:
             location = response.headers.get('Location', '')
-    
     location = unquote(location)
     if location.startswith('/disk'):
         location = location[len('/disk'):]
@@ -48,7 +47,6 @@ async def upload_file(upload_url: str, file_storage) -> str:
 async def get_download_url(path_on_disk: str) -> str:
     headers = _get_auth_headers()
     params = {'path': path_on_disk}
-    
     async with aiohttp.ClientSession() as session:
         async with session.get(
             DOWNLOAD_LINK_URL,
