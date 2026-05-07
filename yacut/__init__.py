@@ -11,14 +11,14 @@ db = SQLAlchemy()
 
 def create_app():
     base_dir = Path(__file__).resolve().parent.parent
-    
+
     app = Flask(
         __name__,
         template_folder=str(base_dir / 'html'),
         static_folder=str(base_dir / 'html'),
         static_url_path=''
     )
-    
+
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev')
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
         'DATABASE_URI', 'sqlite:///yacut.db'
@@ -44,4 +44,4 @@ def create_app():
     return app
 
 
-app = create_app()
+app = create_app()пше 
