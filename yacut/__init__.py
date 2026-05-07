@@ -44,4 +44,4 @@ def create_app():
     return app
 
 
-app = create_app()пше 
+app = create_app()
