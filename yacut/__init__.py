@@ -11,12 +11,11 @@ db = SQLAlchemy()
 
 def create_app():
     base_dir = Path(__file__).resolve().parent.parent
-    html_dir = base_dir / 'html'
     
     app = Flask(
         __name__,
-        template_folder=str(html_dir),
-        static_folder=str(html_dir),
+        template_folder=str(base_dir / 'html'),
+        static_folder=str(base_dir / 'html'),
         static_url_path=''
     )
     

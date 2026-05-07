@@ -21,12 +21,16 @@ async def create_folder(path: str) -> None:
     params = {'path': path}
 
     async with aiohttp.ClientSession() as session:
-        async with session.put(CREATE_FOLDER_URL, headers=headers, params=params) as response:
+        async with session.put(
+            CREATE_FOLDER_URL, headers=headers, params=params
+        ) as response:
             if response.status == 409:
                 pass
             elif response.status not in (200, 201):
                 error_text = await response.text()
-                raise Exception(f"Ошибка создания папки: {response.status}, {error_text}")
+                raise Exception(
+                    f"Ошибка создания папки: {response.status}, {error_text}"
+                )
 
 
 async def get_upload_url(filename: str) -> str:
@@ -39,10 +43,14 @@ async def get_upload_url(filename: str) -> str:
     }
 
     async with aiohttp.ClientSession() as session:
-        async with session.get(UPLOAD_URL, headers=headers, params=params) as response:
+        async with session.get(
+            UPLOAD_URL, headers=headers, params=params
+        ) as response:
             if response.status != 200:
                 error_text = await response.text()
-                raise Exception(f"Ошибка: {response.status}, {error_text}")
+                raise Exception(
+                    f"Ошибка: {response.status}, {error_text}"
+                )
             upload_info = await response.json()
             return upload_info['href']
 
@@ -54,7 +62,9 @@ async def upload_file(upload_url: str, file_storage) -> str:
         async with session.put(upload_url, data=file_bytes) as response:
             if response.status not in (200, 201):
                 error_text = await response.text()
-                raise Exception(f"Ошибка загрузки: {response.status}, {error_text}")
+                raise Exception(
+                    f"Ошибка загрузки: {response.status}, {error_text}"
+                )
             location = response.headers.get('Location', '')
 
     location = unquote(location)
@@ -68,9 +78,13 @@ async def get_download_url(path_on_disk: str) -> str:
     params = {'path': path_on_disk}
 
     async with aiohttp.ClientSession() as session:
-        async with session.get(DOWNLOAD_LINK_URL, headers=headers, params=params) as response:
+        async with session.get(
+            DOWNLOAD_LINK_URL, headers=headers, params=params
+        ) as response:
             if response.status != 200:
                 error_text = await response.text()
-                raise Exception(f"Ошибка: {response.status}, {error_text}")
+                raise Exception(
+                    f"Ошибка: {response.status}, {error_text}"
+                )
             download_info = await response.json()
             return download_info['href']
