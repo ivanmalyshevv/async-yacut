@@ -75,7 +75,6 @@ def files():
                         'short_url': url_for('main.follow_short',
                                              short=short_id,
                                              _external=True),
-                        'download_url': download_url
                     })
             except Exception as e:
                 flash(f'Ошибка при загрузке файлов: {str(e)}', 'danger')
@@ -96,4 +95,4 @@ async def process_file(file_storage, filename):
     db.session.add(url_map)
     db.session.commit()
 
-    return filename, short_id, download_url
+    return filename, short_id

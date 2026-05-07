@@ -22,7 +22,6 @@
         <tr>
           <th>Имя файла</th>
           <th>Короткая ссылка</th>
-          <th>Скачать</th>
         </tr>
       </thead>
       <tbody>
@@ -30,7 +29,6 @@
         <tr>
           <td>{{ file.filename }}</td>
           <td><a href="{{ file.short_url }}">{{ file.short_url }}</a></td>
-          <td><a href="{{ file.download_url }}" target="_blank">Открыть на Яндекс Диске</a></td>
         </tr>
         {% endfor %}
       </tbody>
